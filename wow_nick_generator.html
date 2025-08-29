@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>Генератор ников WoW</title>
+  <style>
+    :root{
+      --bg1:#eaf7ff; --bg2:#ffffff; --panel:#ffffff; --panel-border:#dbe5f0;
+      --muted:#64748b; --text:#0f172a; --brand:#38bdf8; --brand-2:#fca5a5; --success:#22c55e;
+      --radius:16px; --shadow:0 8px 28px rgba(2,6,23,.08); --focus:0 0 0 3px rgba(56,189,248,.35);
+      --alliance:#3b82f6; --horde:#ef4444; --neutral:#10b981;
+      --common:#22c55e; --rare:#3b82f6; --epic:#a855f7;
+    }
+    html[data-theme="dark"]{ --bg1:#0e141a; --bg2:#0b1116; --panel:#121821; --panel-border:#1f2a37; --muted:#a7b0c0; --text:#e9eef7; --shadow:0 10px 30px rgba(0,0,0,.35); }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{ margin:0; color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif; line-height:1.45; -webkit-font-smoothing:antialiased;
+      background:
+        radial-gradient(1200px 600px at 80% -10%, color-mix(in oklab, var(--brand) 20%, transparent), transparent 60%),
+        radial-gradient(900px 500px at -10% 10%, color-mix(in oklab, var(--brand-2) 18%, transparent), transparent 60%),
+        linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 40%); }
+
+    .wrap{max-width:860px; margin-inline:auto; padding:18px; display:flex; flex-direction:column; gap:16px}
+    header{display:flex; align-items:center; justify-content:space-between; gap:12px}
+    .title{font-weight:800; letter-spacing:.3px; font-size:clamp(20px,3.8vw,30px)}
+    .badge{font-size:12px; color:var(--muted)}
+    .card{background:var(--panel); border:1px solid var(--panel-border); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; backdrop-filter:saturate(120%) blur(2px)}
+
+    select,button,input[type="checkbox"]{border:none; border-radius:12px; padding:14px 12px; font-size:16px}
+    select,button{width:100%}
+    select{background:var(--panel); color:var(--text); border:1px solid var(--panel-border)}
+    button{background:var(--brand); color:#0b1220; font-weight:700; transition:transform .05s ease, filter .15s ease}
+    button.secondary{background:var(--brand-2); color:#291111}
+    button.ghost{background:color-mix(in oklab, var(--panel) 80%, var(--bg2)); color:var(--text); border:1px solid var(--panel-border)}
+    button.success{background:var(--success); color:#05140a}
+    button:active{transform:translateY(1px)}
+    button:focus-visible, select:focus-visible{outline:none; box-shadow:var(--focus)}
+    .row{display:flex; gap:8px; flex-wrap:wrap}
+    .row > *{flex:1}
+
+    .nickname{display:flex; align-items:center; justify-content:space-between; gap:12px}
+    .nick{font-weight:900; letter-spacing:.5px; font-size:clamp(24px,6vw,40px)}
+    .nick.common{color:var(--common)} .nick.rare{color:var(--rare)} .nick.epic{color:var(--epic)}
+    html[data-theme="light"] .nick{ text-shadow:0 1px 0 rgba(255,255,255,.6)}
+    .nick:empty::after{content:'Нажми «Сгенерировать»'; color:var(--muted); font-weight:600}
+    @keyframes pop { 0%{transform:scale(.96); opacity:.2} 100%{transform:scale(1); opacity:1} }
+    .nick.animate{ animation: pop .28s ease }
+
+    .meta{display:flex; align-items:center; gap:10px; margin-top:6px; min-height:28px}
+    .chip{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; border:1px solid var(--panel-border); background:color-mix(in oklab, var(--panel) 90%, var(--bg2)); font-size:12px}
+    .chip.common{border-color:color-mix(in oklab, var(--common) 35%, var(--panel-border));}
+    .chip.rare{border-color:color-mix(in oklab, var(--rare) 35%, var(--panel-border));}
+    .chip.epic{border-color:color-mix(in oklab, var(--epic) 35%, var(--panel-border));}
+
+    .favorites{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+    @media (min-width:560px){ .favorites{grid-template-columns:repeat(3,1fr)} }
+    .fav{display:flex; align-items:center; justify-content:space-between; gap:8px; background:color-mix(in oklab, var(--panel) 90%, var(--bg2)); border:1px solid var(--panel-border); border-radius:12px; padding:10px 12px}
+    .fav-name{font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+    .icon-btn{background:color-mix(in oklab, var(--panel) 80%, var(--bg2)); color:var(--text); border:1px solid var(--panel-border); border-radius:10px; padding:10px; min-width:44px; min-height:44px}
+
+    .empty{color:var(--muted); text-align:center; padding:12px}
+    .toolbar{position:sticky; bottom:0; left:0; right:0; background:linear-gradient(180deg, color-mix(in oklab, var(--bg2) 0%, transparent) 0%, color-mix(in oklab, var(--bg2) 85%, transparent) 14%, var(--bg2) 22%); padding:10px 16px}
+    .toolbar .row{gap:10px}
+    .toast{position:fixed; left:50%; bottom:20px; transform:translateX(-50%) translateY(20px); background:var(--panel); color:var(--text); border:1px solid var(--panel-border); padding:10px 14px; border-radius:12px; opacity:0; pointer-events:none; transition:.25s; box-shadow:var(--shadow)}
+    .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+    .small{font-size:12px; color:var(--muted)}
+
+    .theme-toggle{display:inline-flex; align-items:center; gap:8px; padding:10px 12px; border-radius:12px; background:var(--panel); color:var(--text); border:1px solid var(--panel-border); cursor:pointer; width:auto}
+    .theme-toggle .emoji{font-size:18px}
+
+    .faction-seg{display:flex; gap:8px}
+    .faction-seg input{display:none}
+    .faction-btn{flex:1; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; border:1px solid var(--panel-border); border-radius:12px; cursor:pointer; background:var(--panel); color:var(--text); user-select:none}
+    .faction-btn svg{width:18px; height:18px; display:block}
+    .faction-btn[data-faction="alliance"] svg{color:var(--alliance)}
+    .faction-btn[data-faction="horde"] svg{color:var(--horde)}
+    .faction-btn[data-faction="neutral"] svg{color:var(--neutral)}
+    .faction-seg input:checked + .faction-btn{outline: none; box-shadow: var(--focus); border-color: transparent}
+
+    .social{display:flex; gap:8px}
+    .sbtn{flex:0 0 auto; padding:10px 12px; border-radius:12px; border:1px solid var(--panel-border); background:var(--panel); cursor:pointer}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">Генератор ников WoW</div>
+      <div class="row" style="flex:0 0 auto; min-width:320px">
+        <div class="badge" style="flex:1">Sky-Blue · Pale-Red · Green</div>
+        <button id="theme-toggle" class="theme-toggle" aria-label="Переключить тему">
+          <span class="emoji" id="theme-emoji">🌙</span>
+          <span id="theme-label" class="small">Тёмная тема</span>
+        </button>
+      </div>
+    </header>
+
+    <section class="card" aria-labelledby="gen">
+      <div id="gen" class="small" style="margin-bottom:8px">Шаг 1 — выбери стиль/расу и сгенерируй ник</div>
+
+      <div class="faction-seg" role="radiogroup" aria-label="Фракция" style="margin-bottom:8px">
+        <input type="radio" id="fac-alliance" name="faction" value="alliance">
+        <label class="faction-btn" data-faction="alliance" for="fac-alliance" title="Альянс">
+          <!-- Щит (Альянс) -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v6c0 5-3.5 9-7 9s-7-4-7-9V7l7-4Z"/></svg>
+          Альянс
+        </label>
+        <input type="radio" id="fac-horde" name="faction" value="horde">
+        <label class="faction-btn" data-faction="horde" for="fac-horde" title="Орда">
+          <!-- Герб Оргриммара (упрощённый) -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2c-4 2-7 5-7 10s3 8 7 10c4-2 7-5 7-10s-3-8-7-10Z"/>
+            <path d="M12 6a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"/>
+          </svg>
+          Орда
+        </label>
+        <input type="radio" id="fac-neutral" name="faction" value="neutral" checked>
+        <label class="faction-btn" data-faction="neutral" for="fac-neutral" title="Нейтральный">
+          <!-- Лист (нейтрал) -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12c8 0 12-6 18-6 0 8-6 18-18 18 0-6 6-12 12-12"/></svg>
+          Нейтральный
+        </label>
+      </div>
+
+      <div class="row">
+        <select id="race" aria-label="Раса">
+          <option value="auto" selected>Любая раса</option>
+          <option value="human">Человек</option>
+          <option value="nightelf">Ночной эльф</option>
+          <option value="high_elf">Высший эльф</option>
+          <option value="orc">Орк</option>
+          <option value="undead">Нежить</option>
+          <option value="dwarf">Дворф</option>
+          <option value="tauren">Таурен</option>
+          <option value="troll">Тролль</option>
+        </select>
+        <button id="btn-random" class="ghost" title="Случайно выбрать фракцию и расу">🎲 Случайно</button>
+        <button id="btn-generate">Сгенерировать</button>
+      </div>
+
+      <label class="small" style="display:flex; align-items:center; gap:8px; margin-top:8px">
+        <input id="cb-title" type="checkbox" style="width:auto; height:auto" /> Добавлять титул к нику
+      </label>
+
+      <div class="nickname" style="margin-top:12px">
+        <div style="flex:1 1 auto">
+          <div class="nick" id="nickname"></div>
+          <div class="meta">
+            <span id="rarity-chip" class="chip">—</span>
+            <span id="title-line" class="small"></span>
+          </div>
+        </div>
+        <div class="row" style="flex:0 0 auto; min-width:210px">
+          <button class="success" id="btn-copy" aria-label="Скопировать">Скопировать</button>
+          <button class="ghost" id="btn-fav" aria-label="В избранное">★</button>
+        </div>
+      </div>
+      <div class="small" id="helper" style="margin-top:6px">Нажми ★ чтобы добавить в избранное</div>
+      <div class="small" id="left-counter" style="margin-top:4px"></div>
+    </section>
+
+    <section class="card" aria-labelledby="favtitle">
+      <div class="row" style="align-items:center; justify-content:space-between">
+        <div id="favtitle" class="small">Шаг 2 — избранные ники</div>
+        <div class="row" style="flex:0 0 auto; min-width:520px">
+          <div class="social">
+            <button id="share-vk" class="sbtn" title="VK">VK</button>
+            <button id="share-tg" class="sbtn" title="Telegram">TG</button>
+            <button id="share-x" class="sbtn" title="X">X</button>
+          </div>
+          <button class="ghost" id="btn-export">Экспорт</button>
+          <button class="secondary" id="btn-clear">Очистить</button>
+          <button class="ghost" id="btn-copy-all">Копировать все</button>
+          <button class="success" id="btn-card">Скачать карточку</button>
+        </div>
+      </div>
+      <div id="favorites" class="favorites" style="margin-top:10px"></div>
+      <div id="empty" class="empty">Пока пусто. Добавь понравившиеся ники ★</div>
+    </section>
+
+    <section class="card" aria-labelledby="histtitle">
+      <div id="histtitle" class="small" style="margin-bottom:8px">Недавно сгенерированные</div>
+      <div id="history" class="favorites"></div>
+      <div id="history-empty" class="empty">Здесь появятся последние 5</div>
+    </section>
+
+    <div class="toolbar card">
+      <div class="row">
+        <button id="btn-share" class="success">Поделиться ником</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    // ===== Диагностика =====
+    window.addEventListener('error', (e)=>{ const t = document.getElementById('toast'); t.textContent = 'Ошибка: ' + (e.message || 'см. консоль'); t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 3500); console.error(e.error || e.message); });
+
+    // ===== Тема =====
+    const THEME_KEY = 'wowTheme'; const htmlEl = document.documentElement; const themeEmoji = document.getElementById('theme-emoji'); const themeLabel = document.getElementById('theme-label');
+    const systemPrefersDark = ()=> window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    function applyTheme(theme){ const isDark = theme==='dark' || (theme==='system' && systemPrefersDark()); htmlEl.setAttribute('data-theme', isDark?'dark':'light'); if(themeEmoji) themeEmoji.textContent = isDark? '☀️':'🌙'; if(themeLabel) themeLabel.textContent = isDark? 'Светлая тема':'Тёмная тема'; }
+    function initTheme(){ const saved = localStorage.getItem(THEME_KEY); const theme = saved || 'system'; applyTheme(theme); if(theme==='system' && window.matchMedia){ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>applyTheme('system')); } }
+    const toggleTheme = ()=>{ const current = htmlEl.getAttribute('data-theme'); const next = current==='dark'?'light':'dark'; localStorage.setItem(THEME_KEY,next); applyTheme(next); };
+
+    // ===== Данные словарей =====
+    const dict = {
+      alliance: { prefixes:["Light","Silver","Storm","Bright","Moon","Dawn","Sun","Iron","Eagle","Star","Golden","High","True","Azure","Crystal"], suffixes:["blade","song","shield","watcher","heart","runner","seeker","flame","wing","keeper","guard","weaver","stride","grove","caller"] },
+      horde: { prefixes:["Blood","Dark","Gore","Fel","Grim","Iron","Stone","Shadow","Skull","Bone","Rage","Brute","Worg","Grom","Drak"], suffixes:["fang","axe","crusher","howl","bane","tooth","smash","scar","claw","strike","gore","splitter","maw","grin","lash"] },
+      neutral: { prefixes:["Ash","Frost","Night","Storm","Ebon","Void","Rune","Oak","Wolf","Mist","Grave","Myth","Star","Shade","Rune"], suffixes:["whisper","wind","shade","song","stride","walker","spire","bloom","chill","wave","dusk","mourn","drift","root","veil"] }
+    };
+    const races = {
+      human:{ prefixes:["Star","Sun","Bright","True","Val","High"], suffixes:["ford","hart","helm","more","wyn","field"] },
+      nightelf:{ prefixes:["Moon","Shadow","Elun","Star","Night","Sil"], suffixes:["song","whisper","shade","glen","leaf","weaver"] },
+      high_elf:{ prefixes:["Silver","Sun","Dawn","Aure","Crystal","Lumi"], suffixes:["blade","gleam","crest","borne","flare","singer"] },
+      orc:{ prefixes:["Grom","Drak","Gor","Rok","Mok","Grim"], suffixes:["gash","fang","rok","grim","zug","maw"] },
+      undead:{ prefixes:["Grave","Bone","Rot","Mourn","Ghoul","Dread"], suffixes:["whisper","gloom","bile","husk","mourn","rot"] },
+      dwarf:{ prefixes:["Stone","Iron","Bronze","Anvil","Deep","Boulder"], suffixes:["beard","hammer","forge","guard","rock","delve"] },
+      tauren:{ prefixes:["Sun","Thunder","Plain","Sky","Wild","Horn"], suffixes:["walker","hoof","mane","runner","song","totem"] },
+      troll:{ prefixes:["Zul","Jin","Vol","Ras","Sen","Tal"], suffixes:["jin","zala","taka","gora","daka","raka"] }
+    };
+
+    // ===== Титулы =====
+    const titles = {
+      alliance:["Герой Штормграда","Вестник Света","Защитник Альянса","Клинок Солнечного Дола","Часовой Лордерона"],
+      horde:["Герой Оргриммара","Крушитель Альянса","Кровавый страж Оргриммара","Воин Северных степей","Сын Дуротара"],
+      neutral:["Странник вечной тени","Хранитель Древних троп","Голос Пустоты","Путник штормовых троп","Дозорный Туманных долин"]
+    };
+
+    // ===== Состояние =====
+    const $ = sel => document.querySelector(sel);
+    const state = { current:"", rarity:"common", favorites: JSON.parse(localStorage.getItem("wowFavorites")||"[]"), history: JSON.parse(localStorage.getItem("wowHistory")||"[]"), queues:{} };
+
+    // ===== Утилиты =====
+    const rand = arr => arr[Math.floor(Math.random()*arr.length)];
+    const shuffle = arr => { for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; };
+    const setToast = (msg)=>{ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1400); };
+    const saveFavs = ()=> localStorage.setItem("wowFavorites", JSON.stringify(state.favorites));
+    const saveHistory = ()=> localStorage.setItem("wowHistory", JSON.stringify(state.history));
+
+    // ===== Источник очереди =====
+    const getFaction = ()=> (document.querySelector('input[name="faction"]:checked')?.value || 'neutral');
+    const currentKey = ()=>{ const race = $('#race').value; return race !== 'auto' ? `race:${race}` : `faction:${getFaction()}`; };
+    function getDictByKey(key){ if(key.startsWith('race:')){ return races[key.split(':')[1]]; } const f = key.split(':')[1]; return dict[f] || dict.neutral; }
+    function ensureQueue(key){ if(!state.queues[key] || state.queues[key].length===0){ const d = getDictByKey(key); const combos = []; for(const p of d.prefixes){ for(const s of d.suffixes){ combos.push(p+s); } } shuffle(combos); state.queues[key] = combos; } }
+    function countCombosTotal(key){ const d=getDictByKey(key); return (d.prefixes?.length||0)*(d.suffixes?.length||0); }
+    function updateCounter(){ const key=currentKey(); ensureQueue(key); const left=state.queues[key]?.length||0; const total=countCombosTotal(key); const el=$('#left-counter'); if(el) el.textContent = `Осталось комбинаций: ${left} / ${total}`; }
+
+    // ===== Редкость =====
+    function rollRarity(){ const r = Math.random(); if(r < 0.7) return 'common'; if(r < 0.95) return 'rare'; return 'epic'; }
+    const rarityLabel = { common:'Обычный', rare:'Редкий', epic:'Эпический' };
+    const rarityColor = { common:'#22c55e', rare:'#3b82f6', epic:'#a855f7' };
+
+    // ===== Титул по фракции =====
+    function rollTitle(){ const f = getFaction(); const list = titles[f] || titles.neutral; return rand(list); }
+
+    // ===== Генерация =====
+    function generate(){
+      const key = currentKey(); ensureQueue(key);
+      let name = state.queues[key].pop();
+      if(!name){ ensureQueue(key); name = state.queues[key].pop(); setToast('Комбинации закончились, перемешал заново'); }
+      state.current = name; state.rarity = rollRarity();
+      const nickEl = $('#nickname'); nickEl.textContent = name; nickEl.className = 'nick '+state.rarity; nickEl.classList.remove('animate'); void nickEl.offsetWidth; nickEl.classList.add('animate');
+      const chip = $('#rarity-chip'); chip.textContent = rarityLabel[state.rarity]; chip.className = 'chip ' + state.rarity;
+      const addTitle = $('#cb-title').checked; const titleLine = $('#title-line'); titleLine.textContent = addTitle ? '— ' + rollTitle() : '';
+      $('#helper').textContent = 'Нажми ★ чтобы добавить в избранное';
+      pushHistory(name); updateCounter(); return name;
+    }
+
+    // ===== История / Избранное / Рендер =====
+    function pushHistory(name){ if(!name) return; state.history = [name, ...state.history.filter(n=>n!==name)].slice(0,5); saveHistory(); renderHistory(); }
+    function addFavorite(name=state.current){ if(!name) return; if(!state.favorites.includes(name)){ state.favorites.unshift(name); saveFavs(); renderFavorites(); setToast('Добавлено в избранное'); } else { setToast('Уже в избранном'); } }
+    function removeFavorite(name){ state.favorites = state.favorites.filter(n=>n!==name); saveFavs(); renderFavorites(); }
+    function renderFavorites(){ const box = $('#favorites'); box.innerHTML = ''; if(state.favorites.length===0){ $('#empty').style.display='block'; return; } $('#empty').style.display='none'; state.favorites.forEach(n=>{ const el = document.createElement('div'); el.className='fav'; el.innerHTML = `<span class="fav-name" title="${n}">${n}</span><div class="row" style="flex:0 0 auto; min-width:150px"><button class="icon-btn" aria-label="Копировать">⧉</button><button class="icon-btn" aria-label="Удалить">✕</button></div>`; const [btnCopy, btnDel] = el.querySelectorAll('button'); btnCopy.addEventListener('click',()=>copy(n)); btnDel.addEventListener('click',()=>removeFavorite(n)); box.appendChild(el); }); }
+    function renderHistory(){ const box = $('#history'); box.innerHTML = ''; if(state.history.length===0){ $('#history-empty').style.display='block'; return; } $('#history-empty').style.display='none'; state.history.forEach(n=>{ const el = document.createElement('div'); el.className='fav'; el.innerHTML = `<span class="fav-name" title="${n}">${n}</span><div class="row" style="flex:0 0 auto; min-width:110px"><button class="icon-btn" aria-label="В избранное">★</button><button class="icon-btn" aria-label="Копировать">⧉</button>`; const [btnFav, btnCopy] = el.querySelectorAll('button'); btnFav.addEventListener('click',()=>addFavorite(n)); btnCopy.addEventListener('click',()=>copy(n)); box.appendChild(el); }); }
+
+    // ===== Копирование / Шаринг / Экспорт =====
+    async function copy(text=state.current){ if(!text) return; try{ await navigator.clipboard.writeText(text); setToast('Скопировано'); } catch{ setToast('Скопируй вручную: '+text); } }
+    async function share(){ const text = state.current || generate(); if(navigator.share){ try{ await navigator.share({title:'Мой ник для WoW', text}); } catch(e){} } else { copy(text); } }
+    function copyAllFavorites(){ if(state.favorites.length===0){ setToast('Список пуст'); return; } copy(state.favorites.join('\n')); }
+    function exportFavs(){ if(state.favorites.length===0){ setToast('Список пуст'); return; } const blob = new Blob([state.favorites.join('\n')], {type:'text/plain;charset=utf-8'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'wow_nicknames.txt'; a.click(); URL.revokeObjectURL(url); }
+    function clearFavs(){ if(state.favorites.length===0) return; if(confirm('Очистить все избранные ники?')){ state.favorites=[]; saveFavs(); renderFavorites(); setToast('Список очищен'); } }
+
+    // ===== Случайная фракция/раса =====
+    function setFaction(val){ const el = document.getElementById('fac-'+val); if(el) el.checked = true; }
+    function randomizeFactionRace(){ const factions = ['alliance','horde','neutral']; const racesKeys = ['auto','human','nightelf','high_elf','orc','undead','dwarf','tauren','troll']; setFaction(rand(factions)); $('#race').value = rand(racesKeys); updateCounter(); }
+
+    // ===== CANVAS КАРТОЧКА =====
+    function drawVignette(ctx,w,h){
+      const g = ctx.createRadialGradient(w/2,h/2,Math.min(w,h)/4, w/2,h/2,Math.max(w,h)/1.2);
+      g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,0.35)');
+      ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+    }
+    function drawParchment(ctx,w,h){
+      // базовый пергамент
+      const bg = ctx.createLinearGradient(0,0,0,h);
+      bg.addColorStop(0,'#f2e7c9'); bg.addColorStop(1,'#e6d6ad');
+      ctx.fillStyle=bg; ctx.fillRect(0,0,w,h);
+      // шумовые пятна
+      for(let i=0;i<180;i++){
+        const x=Math.random()*w, y=Math.random()*h, r=8+Math.random()*40;
+        const g=ctx.createRadialGradient(x,y,0,x,y,r);
+        g.addColorStop(0,`rgba(120,90,40,${0.04+Math.random()*0.05})`);
+        g.addColorStop(1,'rgba(120,90,40,0)');
+        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+      }
+      // тёмные края
+      const edge = ctx.createLinearGradient(0,0,w,0);
+      edge.addColorStop(0,'rgba(60,40,20,0.35)'); edge.addColorStop(0.02,'rgba(60,40,20,0)'); edge.addColorStop(0.98,'rgba(60,40,20,0)'); edge.addColorStop(1,'rgba(60,40,20,0.35)');
+      ctx.fillStyle=edge; ctx.fillRect(0,0,w,h);
+      const edge2 = ctx.createLinearGradient(0,0,0,h);
+      edge2.addColorStop(0,'rgba(60,40,20,0.35)'); edge2.addColorStop(0.02,'rgba(60,40,20,0)'); edge2.addColorStop(0.98,'rgba(60,40,20,0)'); edge2.addColorStop(1,'rgba(60,40,20,0.35)');
+      ctx.fillStyle=edge2; ctx.fillRect(0,0,w,h);
+    }
+    function drawGoldFrame(ctx,w,h){
+      const pad=18; const r=22;
+      // внешняя рамка
+      const grad=ctx.createLinearGradient(0,0,w,h);
+      grad.addColorStop(0,'#f6e27a'); grad.addColorStop(0.4,'#d4a73d'); grad.addColorStop(0.6,'#fff3a6'); grad.addColorStop(1,'#b78628');
+      ctx.lineWidth=14; ctx.strokeStyle=grad; roundRect(ctx,pad,pad,w-2*pad,h-2*pad,r); ctx.stroke();
+      // внутренняя тонкая тень
+      ctx.lineWidth=2; ctx.strokeStyle='rgba(0,0,0,0.35)'; roundRect(ctx,pad+8,pad+8,w-2*(pad+8),h-2*(pad+8),r-8); ctx.stroke();
+    }
+    function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+    function drawFactionEmblem(ctx,faction,x,y,size,color){
+      ctx.save(); ctx.translate(x,y); ctx.strokeStyle=color; ctx.lineWidth=size*0.08; ctx.lineJoin='round'; ctx.lineCap='round'; ctx.fillStyle='rgba(255,255,255,0.08)';
+      if(faction==='alliance'){
+        // щит
+        ctx.beginPath(); ctx.moveTo(0,-size*0.45); ctx.lineTo(size*0.42,-size*0.2); ctx.lineTo(size*0.42,size*0.2); ctx.quadraticCurveTo(0,size*0.55,-size*0.42,size*0.2); ctx.lineTo(-size*0.42,-size*0.2); ctx.closePath(); ctx.fill(); ctx.stroke();
+      } else if(faction==='horde'){
+        // герб Оргриммара (упрощённый ромб с глазом)
+        ctx.beginPath(); ctx.moveTo(0,-size*0.5); ctx.lineTo(size*0.4,0); ctx.lineTo(0,size*0.5); ctx.lineTo(-size*0.4,0); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0,0,size*0.14,0,Math.PI*2); ctx.stroke();
+      } else {
+        // лист с прожилками
+        const s=size;
+        ctx.beginPath();
+        ctx.moveTo(0,-s*0.60);
+        ctx.bezierCurveTo(s*0.46,-s*0.38,s*0.60,s*0.18,0,s*0.62);
+        ctx.bezierCurveTo(-s*0.60,s*0.18,-s*0.46,-s*0.38,0,-s*0.60);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        // центральная и боковые прожилки
+        ctx.lineWidth=s*0.05; ctx.beginPath(); ctx.moveTo(0,-s*0.50); ctx.lineTo(0,s*0.50); ctx.stroke();
+        ctx.lineWidth=s*0.03; ctx.beginPath();
+        ctx.moveTo(0,-s*0.25); ctx.quadraticCurveTo(s*0.25,-s*0.2,s*0.25,0);
+        ctx.moveTo(0,0); ctx.quadraticCurveTo(s*0.25,0.2,0,s*0.25);
+        ctx.moveTo(0,-s*0.25); ctx.quadraticCurveTo(-s*0.25,-s*0.2,-s*0.25,0);
+        ctx.moveTo(0,0); ctx.quadraticCurveTo(-s*0.25,0.2,0,s*0.25);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function buildCardCanvas(){
+      const w=1200, h=630; // OG-image format
+      const c=document.createElement('canvas'); c.width=w; c.height=h; const ctx=c.getContext('2d');
+      drawParchment(ctx,w,h); drawVignette(ctx,w,h); drawGoldFrame(ctx,w,h);
+      const faction=getFaction(); const emblemColor = faction==='alliance'? '#3b82f6' : faction==='horde'? '#ef4444' : '#10b981';
+      drawFactionEmblem(ctx,faction,1080,90,70,emblemColor);
+
+      // Заголовок — ник
+      const name=state.current || 'YourNick';
+      const titleText = document.getElementById('title-line').textContent || '';
+      const color = rarityColor[state.rarity] || '#ffffff';
+      ctx.textAlign='left'; ctx.textBaseline='top';
+      ctx.font='900 90px \'Segoe UI\', \'Inter\', system-ui, sans-serif';
+      ctx.fillStyle=color; ctx.strokeStyle='rgba(0,0,0,0.3)'; ctx.lineWidth=6; ctx.strokeText(name, 60, 190); ctx.fillText(name, 60, 190);
+
+      // легкое свечение вокруг ника
+      ctx.shadowColor=color; ctx.shadowBlur=18; ctx.fillText(name, 60, 190); ctx.shadowBlur=0;
+
+      // подпись-титул
+      if(titleText){
+        ctx.font='italic 32px \'Georgia\', \'Times New Roman\', serif';
+        ctx.fillStyle='rgba(30,30,30,0.85)';
+        ctx.fillText(titleText.replace(/^\s*—\s*/, ''), 66, 300);
+      }
+
+      // подпись редкости
+      const chipText = 'Редкость: ' + (rarityLabel[state.rarity]||'—');
+      ctx.font='600 28px \'Segoe UI\', \'Inter\', system-ui, sans-serif';
+      ctx.fillStyle='rgba(30,30,30,0.8)';
+      ctx.fillText(chipText, 66, 360);
+
+      // маленький лого-лейбл
+      ctx.font='14px \'Segoe UI\', \'Inter\', system-ui, sans-serif';
+      ctx.fillStyle='rgba(20,20,20,0.6)';
+      ctx.fillText('wow-nicks • generated', 66, 590);
+
+      return c;
+    }
+
+    function downloadCard(){
+      if(!state.current) generate();
+      const c = buildCardCanvas();
+      const a=document.createElement('a'); a.href=c.toDataURL('image/png'); a.download=`${state.current}.png`; a.click();
+    }
+
+    // ===== Шаринг карточки (если поддерживается) =====
+    async function shareCard(){ if(!state.current) generate(); const c=buildCardCanvas(); const b64=c.toDataURL('image/png'); const res = await fetch(b64); const blob = await res.blob(); const file = new File([blob], `${state.current}.png`, {type:'image/png'}); if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({ files:[file], title:'Мой ник для WoW', text: state.current }); }catch(e){} } else { downloadCard(); setToast('Сохранено как PNG'); } }
+
+    // ===== Соцсети: VK / Telegram / X =====
+    function openWin(url){ window.open(url, '_blank','noopener,noreferrer'); }
+    function buildShareText(){ const nick=state.current||'Мой ник'; const t=$('#title-line').textContent||''; const r=rarityLabel[state.rarity]||''; return `${nick} ${t}\nРедкость: ${r}`.trim(); }
+    function shareVK(){ const text=encodeURIComponent(buildShareText()); const url=encodeURIComponent(location.href); openWin(`https://vk.com/share.php?url=${url}&title=${text}`); }
+    function shareTG(){ const text=encodeURIComponent(buildShareText()); const url=encodeURIComponent(location.href); openWin(`https://t.me/share/url?url=${url}&text=${text}`); }
+    function shareX(){ const text=encodeURIComponent(buildShareText()); openWin(`https://twitter.com/intent/tweet?text=${text}`); }
+
+    // ===== События =====
+    document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+    document.getElementById('btn-generate').addEventListener('click', generate);
+    document.getElementById('btn-random').addEventListener('click', ()=>{ randomizeFactionRace(); setToast('Случайный выбор применён'); });
+    document.getElementById('btn-fav').addEventListener('click', ()=> addFavorite());
+    document.getElementById('btn-copy').addEventListener('click', ()=> copy());
+    document.getElementById('btn-share').addEventListener('click', share);
+    document.getElementById('btn-export').addEventListener('click', exportFavs);
+    document.getElementById('btn-clear').addEventListener('click', clearFavs);
+    document.getElementById('btn-copy-all').addEventListener('click', copyAllFavorites);
+    document.getElementById('btn-card').addEventListener('click', downloadCard);
+    document.getElementById('share-vk').addEventListener('click', shareVK);
+    document.getElementById('share-tg').addEventListener('click', shareTG);
+    document.getElementById('share-x').addEventListener('click', shareX);
+    document.getElementById('race').addEventListener('change', updateCounter);
+    document.querySelectorAll('input[name="faction"]').forEach(r=> r.addEventListener('change', updateCounter));
+
+    // ===== Инициализация =====
+    initTheme(); renderFavorites(); renderHistory(); updateCounter(); if(!state.current) generate();
+
+    // ===== Параметры URL: ?faction=, ?race=, ?generate=1 =====
+    (function applyURLParams(){ try{ const p=new URLSearchParams(location.search); const f=p.get('faction'); const r=p.get('race'); const g=p.get('generate'); if(f && ['alliance','horde','neutral'].includes(f)) setFaction(f); if(r && ['auto','human','nightelf','high_elf','orc','undead','dwarf','tauren','troll'].includes(r)) $('#race').value=r; updateCounter(); if(g==='1') generate(); }catch(e){} })();
+  </script>
+</body>
+</html>
